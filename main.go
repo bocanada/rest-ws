@@ -10,6 +10,7 @@ import (
 	"github.com/bocanada/rest-ws/server"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 func main() {
