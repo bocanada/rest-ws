@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"log"
+	"net/http"
 	"os"
 
 	"github.com/bocanada/rest-ws/handlers"
@@ -30,5 +31,6 @@ func main() {
 }
 
 func BindRoutes(s server.Server, r *mux.Router) {
-	r.HandleFunc("/", handlers.HomeHandler(s)).Methods("GET")
+	r.HandleFunc("/", handlers.HomeHandler(s)).Methods(http.MethodGet)
+	r.HandleFunc("/signup", handlers.SignUpHandler(s)).Methods(http.MethodPost)
 }
