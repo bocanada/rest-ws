@@ -8,6 +8,7 @@ import (
 	"github.com/bocanada/rest-ws/repository"
 	"github.com/bocanada/rest-ws/server"
 	"github.com/segmentio/ksuid"
+	"golang.org/x/crypto/bcrypt"
 )
 
 type SignUpRequest struct {
@@ -27,6 +28,11 @@ func SignUpHandler(s server.Server) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
+		hashedPasswd, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 		id, err := ksuid.NewRandom()
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -34,7 +40,7 @@ func SignUpHandler(s server.Server) http.HandlerFunc {
 		}
 		user := models.User{
 			Email:    req.Email,
-			Password: req.Password,
+			Password: string(hashedPasswd),
 			ID:       id.String(),
 		}
 		if err = repository.InsertUser(r.Context(), &user); err != nil {
