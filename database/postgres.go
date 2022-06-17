@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"database/sql"
-	"log"
 
 	"github.com/bocanada/rest-ws/models"
 )
@@ -38,12 +37,7 @@ func (repo *PostgresRepository) GetUserById(ctx context.Context, id string) (*mo
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		err = rows.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}()
+	defer rows.Close()
 
 	var user models.User
 	for rows.Next() {
@@ -62,12 +56,7 @@ func (repo *PostgresRepository) GetPostById(ctx context.Context, id string) (*mo
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		err = rows.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}()
+	defer rows.Close()
 
 	var post models.Post
 	for rows.Next() {
@@ -86,12 +75,7 @@ func (repo *PostgresRepository) GetUserByEmail(ctx context.Context, email string
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		err = rows.Close()
-		if err != nil {
-			log.Fatal(err)
-		}
-	}()
+	defer rows.Close()
 
 	var user models.User
 	for rows.Next() {
