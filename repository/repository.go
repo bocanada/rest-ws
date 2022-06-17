@@ -6,7 +6,7 @@ import (
 	"github.com/bocanada/rest-ws/models"
 )
 
-type UserRepository interface {
+type Respository interface {
 	InsertUser(ctx context.Context, user *models.User) error
 	GetUserById(ctx context.Context, id string) (*models.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
@@ -14,9 +14,9 @@ type UserRepository interface {
 	Close() error
 }
 
-var implementation UserRepository
+var implementation Respository
 
-func SetRepository(repository UserRepository) {
+func SetRepository(repository Respository) {
 	implementation = repository
 }
 
