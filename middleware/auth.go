@@ -4,7 +4,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/bocanada/rest-ws/models"
+	"github.com/bocanada/rest-ws/helpers"
 	"github.com/bocanada/rest-ws/server"
 	"github.com/golang-jwt/jwt"
 	"github.com/gorilla/mux"
@@ -34,12 +34,11 @@ func CheckAuthMiddleware(s server.Server) mux.MiddlewareFunc {
 				next.ServeHTTP(w, r)
 				return
 			}
-			tokenString := strings.TrimSpace(r.Header.Get("Authorization"))
-			_, err := jwt.ParseWithClaims(tokenString, &models.AppClaims{}, func(t *jwt.Token) (interface{}, error) {
+			_, err := helpers.ParseAppClaims(r.Header.Get("Authorization"), func(t *jwt.Token) (interface{}, error) {
 				return []byte(s.Config().JWTSecret), nil
 			})
 			if err != nil {
-				models.NewResponseError(err).Send(w, http.StatusUnauthorized)
+				helpers.NewResponseError(err).Send(w, http.StatusUnauthorized)
 				return
 			}
 			next.ServeHTTP(w, r)

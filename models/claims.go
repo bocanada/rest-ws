@@ -1,8 +1,10 @@
 package models
 
-import "github.com/golang-jwt/jwt"
+import (
+	"github.com/golang-jwt/jwt"
+)
 
 type AppClaims struct {
-    UserId string `json:"user_id"`
-    jwt.StandardClaims
+	UserId string `json:"user_id"`
+	jwt.StandardClaims
 }

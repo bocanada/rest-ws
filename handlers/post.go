@@ -2,9 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
-	"strings"
 
+	"github.com/bocanada/rest-ws/helpers"
 	"github.com/bocanada/rest-ws/models"
 	"github.com/bocanada/rest-ws/repository"
 	"github.com/bocanada/rest-ws/server"
@@ -23,37 +24,40 @@ type InsertPostResponse struct {
 
 func InsertPostHandler(s server.Server) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		tokenString := strings.TrimSpace(r.Header.Get("Authorization"))
-		token, err := jwt.ParseWithClaims(tokenString, &models.AppClaims{}, func(_ *jwt.Token) (interface{}, error) {
+		claims, err := helpers.ParseAppClaims(r.Header.Get("Authorization"), func(_ *jwt.Token) (interface{}, error) {
 			return []byte(s.Config().JWTSecret), nil
 		})
+		var statusCode int
 		if err != nil {
-			models.NewResponseError(err).Send(w, http.StatusUnauthorized)
+			if errors.Is(err, helpers.InvalidToken) {
+				statusCode = http.StatusUnauthorized
+			} else {
+				statusCode = http.StatusInternalServerError
+			}
+			helpers.NewResponseError(err).Send(w, statusCode)
 			return
 		}
-		if claims, ok := token.Claims.(*models.AppClaims); ok && token.Valid {
-			var req InsertPostRequest
-			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-				models.NewResponseError(err).Send(w, http.StatusBadRequest)
-				return
-			}
-			id, err := ksuid.NewRandom()
-			if err != nil {
-				models.NewResponseError(err).Send(w, http.StatusInternalServerError)
-				return
-			}
-			post := models.Post{
-				Id:          id.String(),
-				PostContent: req.PostContent,
-				UserId:      claims.UserId,
-			}
-			if err = repository.InsertPost(r.Context(), &post); err != nil {
-				models.NewResponseError(err).Send(w, http.StatusInternalServerError)
-				return
-			}
-			models.NewResponseOk(InsertPostResponse{Id: post.Id, PostContent: post.PostContent}).Send(w, http.StatusOK)
-		} else {
-			models.NewResponseError(err).Send(w, http.StatusInternalServerError)
+
+		var req InsertPostRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			helpers.NewResponseError(err).Send(w, http.StatusBadRequest)
+			return
 		}
+
+		id, err := ksuid.NewRandom()
+		if err != nil {
+			helpers.NewResponseError(err).Send(w, http.StatusInternalServerError)
+			return
+		}
+		post := models.Post{
+			Id:          id.String(),
+			PostContent: req.PostContent,
+			UserId:      claims.UserId,
+		}
+		if err = repository.InsertPost(r.Context(), &post); err != nil {
+			helpers.NewResponseError(err).Send(w, http.StatusInternalServerError)
+			return
+		}
+		helpers.NewResponseOk(InsertPostResponse{Id: post.Id, PostContent: post.PostContent}).Send(w, http.StatusOK)
 	}
 }
