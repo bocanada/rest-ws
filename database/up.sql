@@ -6,3 +6,12 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT NOW()
 );
+
+DROP TABLE IF EXISTS posts;
+
+CREATE TABLE posts (
+    id VARCHAR(32) PRIMARY KEY,
+    post_content VARCHAR(322) NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+    user_id VARCHAR(32) REFERENCES users(id)
+);
