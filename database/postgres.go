@@ -124,6 +124,23 @@ func (repo *PostgresRepository) UpdatePost(ctx context.Context, post *models.Pos
 	return nil
 }
 
+func (repo *PostgresRepository) DeletePost(ctx context.Context, post *models.Post) error {
+	res, err := repo.db.ExecContext(ctx, "DELETE FROM posts WHERE id = $1 AND user_id = $2",
+		post.Id,
+		post.UserId)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
 func (repo *PostgresRepository) Close() error {
 	return repo.db.Close()
 }

@@ -129,3 +129,36 @@ func UpdatePostHandler(s server.Server) http.HandlerFunc {
 		helpers.NewResponseOk(InsertPostResponse{Id: post.Id, PostContent: post.PostContent}).Send(w, http.StatusOK)
 	}
 }
+
+func DeletePostHandler(s server.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, err := helpers.ParseAppClaims(r.Header.Get("Authorization"), func(_ *jwt.Token) (interface{}, error) {
+			return []byte(s.Config().JWTSecret), nil
+		})
+		if err != nil {
+			var statusCode int
+			if errors.Is(err, helpers.InvalidToken) {
+				statusCode = http.StatusUnauthorized
+			} else {
+				statusCode = http.StatusInternalServerError
+			}
+			helpers.NewResponseError(err).Send(w, statusCode)
+			return
+		}
+		vars := mux.Vars(r)
+		post, err := repository.GetPostById(r.Context(), vars["id"])
+		if err != nil {
+			helpers.NewResponseError(err).Send(w, http.StatusInternalServerError)
+			return
+		}
+		if err = repository.DeletePost(r.Context(), post); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				helpers.NewResponseError(PostNotFound).Send(w, http.StatusNotFound)
+			} else {
+				helpers.NewResponseError(err).Send(w, http.StatusInternalServerError)
+			}
+			return
+		}
+		helpers.NewResponseOk(post).Send(w, http.StatusOK)
+	}
+}
