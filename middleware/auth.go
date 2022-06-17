@@ -12,6 +12,7 @@ import (
 
 var (
 	NO_AUTH_NEEDED = []string{
+		"/",
 		"login",
 		"signup",
 	}
@@ -38,7 +39,7 @@ func CheckAuthMiddleware(s server.Server) mux.MiddlewareFunc {
 				return []byte(s.Config().JWTSecret), nil
 			})
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusUnauthorized)
+				models.NewResponseError(err).Send(w, http.StatusUnauthorized)
 				return
 			}
 			next.ServeHTTP(w, r)
