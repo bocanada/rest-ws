@@ -10,6 +10,7 @@ type UserRepository interface {
 	InsertUser(ctx context.Context, user *models.User) error
 	GetUserById(ctx context.Context, id string) (*models.User, error)
 	GetUserByEmail(ctx context.Context, email string) (*models.User, error)
+	InsertPost(ctx context.Context, post *models.Post) error
 	Close() error
 }
 
@@ -21,6 +22,10 @@ func SetRepository(repository UserRepository) {
 
 func InsertUser(ctx context.Context, user *models.User) error {
 	return implementation.InsertUser(ctx, user)
+}
+
+func InsertPost(ctx context.Context, post *models.Post) error {
+	return implementation.InsertPost(ctx, post)
 }
 
 func GetUserById(ctx context.Context, id string) (*models.User, error) {
