@@ -10,6 +10,7 @@ import (
 	"github.com/bocanada/rest-ws/repository"
 	"github.com/bocanada/rest-ws/server"
 	"github.com/golang-jwt/jwt"
+	"github.com/gorilla/mux"
 	"github.com/segmentio/ksuid"
 )
 
@@ -59,5 +60,24 @@ func InsertPostHandler(s server.Server) http.HandlerFunc {
 			return
 		}
 		helpers.NewResponseOk(InsertPostResponse{Id: post.Id, PostContent: post.PostContent}).Send(w, http.StatusOK)
+	}
+}
+
+func GetPostByIdHandler(s server.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, err := helpers.ParseAppClaims(r.Header.Get("Authorization"), func(_ *jwt.Token) (interface{}, error) {
+			return []byte(s.Config().JWTSecret), nil
+		})
+		if err != nil {
+			helpers.NewResponseError(err).Send(w, http.StatusUnauthorized)
+			return
+		}
+		vars := mux.Vars(r)
+		post, err := repository.GetPostById(r.Context(), vars["id"])
+		if err != nil {
+			helpers.NewResponseError(err).Send(w, http.StatusInternalServerError)
+			return
+		}
+		helpers.NewResponseOk(post).Send(w, http.StatusOK)
 	}
 }
