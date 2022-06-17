@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -14,7 +15,7 @@ import (
 	"github.com/segmentio/ksuid"
 )
 
-type InsertPostRequest struct {
+type UpsertPostRequest struct {
 	PostContent string `json:"post_content"`
 }
 
@@ -43,7 +44,7 @@ func InsertPostHandler(s server.Server) http.HandlerFunc {
 			return
 		}
 
-		var req InsertPostRequest
+		var req UpsertPostRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			helpers.NewResponseError(err).Send(w, http.StatusBadRequest)
 			return
@@ -87,5 +88,44 @@ func GetPostByIdHandler(s server.Server) http.HandlerFunc {
 			return
 		}
 		helpers.NewResponseOk(post).Send(w, http.StatusOK)
+	}
+}
+
+func UpdatePostHandler(s server.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		claims, err := helpers.ParseAppClaims(r.Header.Get("Authorization"), func(_ *jwt.Token) (interface{}, error) {
+			return []byte(s.Config().JWTSecret), nil
+		})
+		if err != nil {
+			var statusCode int
+			if errors.Is(err, helpers.InvalidToken) {
+				statusCode = http.StatusUnauthorized
+			} else {
+				statusCode = http.StatusInternalServerError
+			}
+			helpers.NewResponseError(err).Send(w, statusCode)
+			return
+		}
+
+		var req UpsertPostRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			helpers.NewResponseError(err).Send(w, http.StatusBadRequest)
+			return
+		}
+		vars := mux.Vars(r)
+		post := models.Post{
+			Id:          vars["id"],
+			PostContent: req.PostContent,
+			UserId:      claims.UserId,
+		}
+		if err = repository.UpdatePost(r.Context(), &post); err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				helpers.NewResponseError(PostNotFound).Send(w, http.StatusNotFound)
+			} else {
+				helpers.NewResponseError(err).Send(w, http.StatusInternalServerError)
+			}
+			return
+		}
+		helpers.NewResponseOk(InsertPostResponse{Id: post.Id, PostContent: post.PostContent}).Send(w, http.StatusOK)
 	}
 }

@@ -106,6 +106,24 @@ func (repo *PostgresRepository) GetUserByEmail(ctx context.Context, email string
 	return &user, nil
 }
 
+func (repo *PostgresRepository) UpdatePost(ctx context.Context, post *models.Post) error {
+	res, err := repo.db.ExecContext(ctx, "UPDATE posts SET post_content = $1 WHERE id = $2 AND user_id = $3",
+		post.PostContent,
+		post.Id,
+		post.UserId)
+	if err != nil {
+		return err
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
 func (repo *PostgresRepository) Close() error {
 	return repo.db.Close()
 }
