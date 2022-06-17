@@ -23,6 +23,10 @@ type InsertPostResponse struct {
 	PostContent string `json:"post_content"`
 }
 
+var (
+	PostNotFound = errors.New("post does not exist")
+)
+
 func InsertPostHandler(s server.Server) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		claims, err := helpers.ParseAppClaims(r.Header.Get("Authorization"), func(_ *jwt.Token) (interface{}, error) {
@@ -76,6 +80,10 @@ func GetPostByIdHandler(s server.Server) http.HandlerFunc {
 		post, err := repository.GetPostById(r.Context(), vars["id"])
 		if err != nil {
 			helpers.NewResponseError(err).Send(w, http.StatusInternalServerError)
+			return
+		}
+		if post.Id == "" {
+			helpers.NewResponseError(PostNotFound).Send(w, http.StatusNotFound)
 			return
 		}
 		helpers.NewResponseOk(post).Send(w, http.StatusOK)
