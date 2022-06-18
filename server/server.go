@@ -8,6 +8,7 @@ import (
 
 	"github.com/bocanada/rest-ws/database"
 	"github.com/bocanada/rest-ws/repository"
+	"github.com/bocanada/rest-ws/websocket"
 	"github.com/gorilla/mux"
 )
 
@@ -19,15 +20,21 @@ type Config struct {
 
 type Server interface {
 	Config() *Config
+	Hub() *websocket.Hub
 }
 
 type Broker struct {
 	config *Config
 	router *mux.Router
+	hub    *websocket.Hub
 }
 
 func (b *Broker) Config() *Config {
 	return b.config
+}
+
+func (b *Broker) Hub() *websocket.Hub {
+	return b.hub
 }
 
 func NewServer(ctx context.Context, cfg *Config) (*Broker, error) {
@@ -41,7 +48,7 @@ func NewServer(ctx context.Context, cfg *Config) (*Broker, error) {
 		return nil, errors.New("database url is required")
 	}
 
-	return &Broker{config: cfg, router: mux.NewRouter()}, nil
+	return &Broker{config: cfg, router: mux.NewRouter(), hub: websocket.NewHub()}, nil
 }
 
 func (b *Broker) Start(binder func(s Server, r *mux.Router)) {
@@ -51,6 +58,7 @@ func (b *Broker) Start(binder func(s Server, r *mux.Router)) {
 	if err != nil {
 		log.Fatal(err)
 	}
+	go b.hub.Run()
 	repository.SetRepository(repo)
 	log.Println("Starting server on port", b.Config().Port)
 	if err := http.ListenAndServe(b.config.Port, b.router); err != nil {

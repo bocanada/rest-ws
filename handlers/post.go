@@ -65,6 +65,11 @@ func InsertPostHandler(s server.Server) http.HandlerFunc {
 			helpers.NewResponseError(err).Send(w, http.StatusInternalServerError)
 			return
 		}
+		postMessage := models.WebSocketMessage{
+			Type:    models.PostCreatedMessage,
+			Payload: post,
+		}
+		s.Hub().Broadcast(postMessage, nil)
 		helpers.NewResponseOk(InsertPostResponse{Id: post.Id, PostContent: post.PostContent}).Send(w, http.StatusOK)
 	}
 }
@@ -183,6 +188,13 @@ func ListPostsHandler(s server.Server) http.HandlerFunc {
 			helpers.NewResponseError(err).Send(w, http.StatusInternalServerError)
 			return
 		}
-		helpers.NewResponseOk(posts).Send(w, http.StatusOK)
+		resp := helpers.NewResponseOk(posts)
+		if length := len(posts); length > 1 {
+			last := posts[len(posts)-1].Id
+			params.Set("after", last)
+			r.URL.RawQuery = params.Encode()
+			resp.Next = r.URL.String()
+		}
+		resp.Send(w, http.StatusOK)
 	}
 }

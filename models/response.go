@@ -8,6 +8,7 @@ import (
 type Response[T any] struct {
 	Error  string `json:"error,omitempty"`
 	Result T      `json:"result,omitempty"`
+	Next   string `json:"next,omitempty"`
 	Ok     bool   `json:"ok"`
 }
 
