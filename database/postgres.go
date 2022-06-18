@@ -24,14 +24,6 @@ func (repo *PostgresRepository) InsertUser(ctx context.Context, user *models.Use
 	return err
 }
 
-func (repo *PostgresRepository) InsertPost(ctx context.Context, post *models.Post) error {
-	_, err := repo.db.ExecContext(ctx, "INSERT INTO posts (id, post_content, user_id) VALUES ($1, $2, $3)",
-		post.Id,
-		post.PostContent,
-		post.UserId)
-	return err
-}
-
 func (repo *PostgresRepository) GetUserById(ctx context.Context, id string) (*models.User, error) {
 	rows, err := repo.db.QueryContext(ctx, "SELECT id, email FROM users WHERE id = $1", id)
 	if err != nil {
@@ -49,25 +41,6 @@ func (repo *PostgresRepository) GetUserById(ctx context.Context, id string) (*mo
 		return nil, err
 	}
 	return &user, nil
-}
-
-func (repo *PostgresRepository) GetPostById(ctx context.Context, id string) (*models.Post, error) {
-	rows, err := repo.db.QueryContext(ctx, "SELECT id, post_content, user_id, created_at FROM posts WHERE id = $1", id)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var post models.Post
-	for rows.Next() {
-		if err = rows.Scan(&post.Id, &post.PostContent, &post.UserId, &post.CreatedAt); err != nil {
-			return nil, err
-		}
-	}
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-	return &post, nil
 }
 
 func (repo *PostgresRepository) GetUserByEmail(ctx context.Context, email string) (*models.User, error) {
@@ -88,6 +61,33 @@ func (repo *PostgresRepository) GetUserByEmail(ctx context.Context, email string
 		return nil, err
 	}
 	return &user, nil
+}
+
+func (repo *PostgresRepository) InsertPost(ctx context.Context, post *models.Post) error {
+	_, err := repo.db.ExecContext(ctx, "INSERT INTO posts (id, post_content, user_id) VALUES ($1, $2, $3)",
+		post.Id,
+		post.PostContent,
+		post.UserId)
+	return err
+}
+
+func (repo *PostgresRepository) GetPostById(ctx context.Context, id string) (*models.Post, error) {
+	rows, err := repo.db.QueryContext(ctx, "SELECT id, post_content, user_id, created_at FROM posts WHERE id = $1", id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var post models.Post
+	for rows.Next() {
+		if err = rows.Scan(&post.Id, &post.PostContent, &post.UserId, &post.CreatedAt); err != nil {
+			return nil, err
+		}
+	}
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return &post, nil
 }
 
 func (repo *PostgresRepository) UpdatePost(ctx context.Context, post *models.Post) error {
@@ -123,6 +123,39 @@ func (repo *PostgresRepository) DeletePost(ctx context.Context, post *models.Pos
 		return sql.ErrNoRows
 	}
 	return nil
+}
+
+func (repo *PostgresRepository) ListPosts(ctx context.Context, limit uint64, after string) ([]*models.Post, error) {
+	var rows *sql.Rows
+	var err error
+	if after == "" {
+		rows, err = repo.db.QueryContext(ctx,
+			"SELECT id, post_content, user_id, created_at FROM posts ORDER BY id ASC LIMIT $1",
+			limit)
+	} else {
+		rows, err = repo.db.QueryContext(ctx,
+			"SELECT id, post_content, user_id, created_at FROM posts WHERE id > $2  ORDER BY id ASC LIMIT $1",
+			limit,
+			after)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var posts []*models.Post
+	for rows.Next() {
+		var post models.Post
+		if err = rows.Scan(&post.Id, &post.PostContent, &post.UserId, &post.CreatedAt); err != nil {
+			return nil, err
+		}
+		posts = append(posts, &post)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+	return posts, nil
 }
 
 func (repo *PostgresRepository) Close() error {

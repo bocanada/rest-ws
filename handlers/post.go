@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/bocanada/rest-ws/helpers"
 	"github.com/bocanada/rest-ws/models"
@@ -136,13 +137,7 @@ func DeletePostHandler(s server.Server) http.HandlerFunc {
 			return []byte(s.Config().JWTSecret), nil
 		})
 		if err != nil {
-			var statusCode int
-			if errors.Is(err, helpers.InvalidToken) {
-				statusCode = http.StatusUnauthorized
-			} else {
-				statusCode = http.StatusInternalServerError
-			}
-			helpers.NewResponseError(err).Send(w, statusCode)
+			helpers.NewResponseError(err).Send(w, http.StatusUnauthorized)
 			return
 		}
 		vars := mux.Vars(r)
@@ -160,5 +155,34 @@ func DeletePostHandler(s server.Server) http.HandlerFunc {
 			return
 		}
 		helpers.NewResponseOk(post).Send(w, http.StatusOK)
+	}
+}
+
+func stringToInt(value string, def uint64) uint64 {
+	v, err := strconv.ParseUint(value, 10, 64)
+	if err != nil {
+		return def
+	}
+	return v
+}
+
+func ListPostsHandler(s server.Server) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		_, err := helpers.ParseAppClaims(r.Header.Get("Authorization"), func(_ *jwt.Token) (interface{}, error) {
+			return []byte(s.Config().JWTSecret), nil
+		})
+		if err != nil {
+			helpers.NewResponseError(err).Send(w, http.StatusUnauthorized)
+			return
+		}
+		params := r.URL.Query()
+		after := params.Get("after")
+		limit := stringToInt(params.Get("limit"), 100)
+		posts, err := repository.ListPosts(r.Context(), limit, after)
+		if err != nil {
+			helpers.NewResponseError(err).Send(w, http.StatusInternalServerError)
+			return
+		}
+		helpers.NewResponseOk(posts).Send(w, http.StatusOK)
 	}
 }
