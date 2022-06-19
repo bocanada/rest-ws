@@ -132,13 +132,18 @@ func UpdatePostHandler(s server.Server) http.HandlerFunc {
 			}
 			return
 		}
+		postMessage := models.WebSocketMessage{
+			Type:    models.PostUpdatedMessage,
+			Payload: post,
+		}
+		s.Hub().Broadcast(postMessage, nil)
 		helpers.NewResponseOk(InsertPostResponse{Id: post.Id, PostContent: post.PostContent}).Send(w, http.StatusOK)
 	}
 }
 
 func DeletePostHandler(s server.Server) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		_, err := helpers.ParseAppClaims(r.Header.Get("Authorization"), func(_ *jwt.Token) (interface{}, error) {
+		claims, err := helpers.ParseAppClaims(r.Header.Get("Authorization"), func(_ *jwt.Token) (interface{}, error) {
 			return []byte(s.Config().JWTSecret), nil
 		})
 		if err != nil {
@@ -151,6 +156,10 @@ func DeletePostHandler(s server.Server) http.HandlerFunc {
 			helpers.NewResponseError(err).Send(w, http.StatusInternalServerError)
 			return
 		}
+		if post.UserId != claims.UserId {
+			helpers.NewResponseError(errors.New("unauthorized DELETE")).Send(w, http.StatusUnauthorized)
+			return
+		}
 		if err = repository.DeletePost(r.Context(), post); err != nil {
 			if errors.Is(err, sql.ErrNoRows) {
 				helpers.NewResponseError(PostNotFound).Send(w, http.StatusNotFound)
@@ -159,6 +168,11 @@ func DeletePostHandler(s server.Server) http.HandlerFunc {
 			}
 			return
 		}
+		postMessage := models.WebSocketMessage{
+			Type:    models.PostDeletedMessage,
+			Payload: post,
+		}
+		s.Hub().Broadcast(postMessage, nil)
 		helpers.NewResponseOk(post).Send(w, http.StatusOK)
 	}
 }
@@ -173,13 +187,6 @@ func stringToInt(value string, def uint64) uint64 {
 
 func ListPostsHandler(s server.Server) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		_, err := helpers.ParseAppClaims(r.Header.Get("Authorization"), func(_ *jwt.Token) (interface{}, error) {
-			return []byte(s.Config().JWTSecret), nil
-		})
-		if err != nil {
-			helpers.NewResponseError(err).Send(w, http.StatusUnauthorized)
-			return
-		}
 		params := r.URL.Query()
 		after := params.Get("after")
 		limit := stringToInt(params.Get("limit"), 100)
