@@ -31,6 +31,7 @@ type LoginResponse struct {
 
 var (
 	InvalidCredentials = errors.New("invalid credentials")
+	UserNotFound       = errors.New("user not found")
 	ExpireTime         = time.Now().Add(2 * time.Hour * 24)
 )
 
@@ -111,6 +112,10 @@ func MeHandler(s server.Server) http.HandlerFunc {
 		user, err := repository.GetUserById(r.Context(), claims.UserId)
 		if err != nil {
 			helpers.NewResponseError(err).Send(w, http.StatusInternalServerError)
+			return
+		}
+		if user.ID == "" {
+			helpers.NewResponseError(UserNotFound).Send(w, http.StatusNotFound)
 			return
 		}
 		helpers.NewResponseOk(user).Send(w, http.StatusOK)
