@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/bocanada/rest-ws/helpers"
 	"github.com/gorilla/websocket"
@@ -45,7 +46,7 @@ func (hub *Hub) HandleWebSocket(w http.ResponseWriter, r *http.Request) {
 }
 
 func (hub *Hub) onConnect(client *Client) {
-	log.Println("Client connected: ", client.socket.RemoteAddr())
+	log.Println("Client connected: ", client.socket.RemoteAddr(), len(hub.clients))
 	hub.mutex.Lock()
 	defer hub.mutex.Unlock()
 	client.id = client.socket.RemoteAddr().String()
@@ -55,7 +56,7 @@ func (hub *Hub) onConnect(client *Client) {
 }
 
 func (hub *Hub) onDisconnect(client *Client) {
-	log.Println("Client disconnected: ", client.socket.RemoteAddr(), "with id: ", client.id)
+	log.Println("Client disconnected: ", client.socket.RemoteAddr())
 	client.socket.Close()
 	hub.mutex.Lock()
 	defer hub.mutex.Unlock()
@@ -88,6 +89,7 @@ func (hub *Hub) Broadcast(message any, ignore *Client) {
 		if ignore != nil && c.id == ignore.id {
 			continue
 		}
+		c.socket.SetWriteDeadline(time.Now().Add(10 * time.Second))
 		c.outbound <- data
 	}
 }
