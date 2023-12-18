@@ -9,7 +9,7 @@ require (
 	github.com/joho/godotenv v1.4.0
 	github.com/lib/pq v1.10.6
 	github.com/segmentio/ksuid v1.0.4
-	golang.org/x/crypto v0.0.0-20220525230936-793ad666bf5e
+	golang.org/x/crypto v0.17.0
 )
 
-require github.com/rs/cors v1.8.2 // indirect
+require github.com/rs/cors v1.8.2
